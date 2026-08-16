@@ -158,3 +158,7 @@ MIT
 If you use this package in your work, please also cite the underlying JSME editor:
 
 > B. Bienfait and P. Ertl, [JSME: a free molecule editor in JavaScript](https://link.springer.com/article/10.1186/1758-2946-5-24), *J. Cheminformatics* **5**:24 (2013)
+
+If you use `streamlit-jsme` in your work, please cite it as:
+
+> C. Nantasenamat, *streamlit-jsme: JSME molecule editor as a Streamlit V2 custom component*, 2026. https://github.com/dataprofessor/streamlit-jsme
