@@ -194,5 +194,6 @@ def st_jsme(
         data={"molecule": molecule, "height": height, "format": format},
         default={"result": ""},
         key=f"{key}_h{height}" if key else f"jsme_h{height}",
+        on_result_change=lambda: None,
     )
     return (result.result or "") if result else ""

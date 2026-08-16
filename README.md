@@ -4,6 +4,8 @@ A Streamlit V2 custom component that embeds the [JSME Molecule Editor](https://j
 
 Because it uses the Streamlit V2 component API (no iframe), JSME runs in the **main page DOM**, avoiding the WASM/CSP restrictions that affect iframe-based editors in Snowflake SiS and similar managed environments.
 
+![streamlit-jsme screenshot](streamlit-jsme-screenshot.png)
+
 ## Installation
 
 ```bash
