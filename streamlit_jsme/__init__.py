@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = ["st_jsme"]
 
 # ── HTML: container div + button bar ──────────────────────────────────────
