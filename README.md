@@ -152,3 +152,9 @@ Returns the molecular representation in the requested format after the user clic
 ## License
 
 MIT
+
+## Citation
+
+If you use this package in your work, please also cite the underlying JSME editor:
+
+> B. Bienfait and P. Ertl, [JSME: a free molecule editor in JavaScript](https://link.springer.com/article/10.1186/1758-2946-5-24), *J. Cheminformatics* **5**:24 (2013)
