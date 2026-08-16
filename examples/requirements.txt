@@ -1,1 +1,1 @@
-streamlit-jsme
+streamlit-jsme>=0.1.3
