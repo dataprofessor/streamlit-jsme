@@ -16,7 +16,7 @@ import os
 
 import streamlit as st
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 __all__ = ["st_jsme"]
 
 FORMATS = ("SMILES", "SMILES_NOISO", "MOL")
@@ -110,6 +110,27 @@ _HTML = (
 <script>"""
     + _nocache_script
     + """</script>
+<script>
+// GWT deferred fragments call $wnd.jsme.runAsyncCallbackN() where $wnd=window.parent.
+// In an iframe context (Streamlit Community Cloud) window.parent !== window, so jsme
+// must also be reachable on the parent window.
+(function() {
+  function propagate() {
+    if (!window.jsme || !window.jsme.onScriptDownloaded) return;
+    try {
+      if (window.parent && window.parent !== window && !window.parent.jsme) {
+        window.parent.jsme = window.jsme;
+      }
+    } catch(e) {}
+  }
+  // Try immediately, then poll until jsme is initialised.
+  propagate();
+  var t = setInterval(function() {
+    propagate();
+    if (window.jsme && window.jsme.onScriptDownloaded) clearInterval(t);
+  }, 20);
+})();
+</script>
 """
 )
 
