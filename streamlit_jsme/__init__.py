@@ -16,7 +16,7 @@ import os
 
 import streamlit as st
 
-__version__ = "0.1.9"
+__version__ = "0.1.10"
 __all__ = ["st_jsme"]
 
 FORMATS = ("SMILES", "SMILES_NOISO", "MOL")
@@ -83,20 +83,26 @@ def _build_jsme_blob_setup() -> tuple[str, str]:
   var _pngBlob = URL.createObjectURL(new Blob([_pngArr], {{type: 'image/png'}}));
   window._jsmeBlobs['{_PNG_NAME}'] = _pngBlob;
 
-  // Intercept img.src to serve the bundled PNG via blob: URL.
+  // Intercept img.src (property) and img.setAttribute to serve the bundled PNG via blob: URL.
+  function _remapSrc(val) {{
+    if (typeof val === 'string') {{
+      for (var k in window._jsmeBlobs) {{
+        if (val.endsWith(k)) return window._jsmeBlobs[k];
+      }}
+    }}
+    return val;
+  }}
   var _imgSrcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
   Object.defineProperty(HTMLImageElement.prototype, 'src', {{
     get: function() {{ return _imgSrcDesc.get.call(this); }},
-    set: function(val) {{
-      if (typeof val === 'string') {{
-        for (var k in window._jsmeBlobs) {{
-          if (val.endsWith(k)) {{ val = window._jsmeBlobs[k]; break; }}
-        }}
-      }}
-      _imgSrcDesc.set.call(this, val);
-    }},
+    set: function(val) {{ _imgSrcDesc.set.call(this, _remapSrc(val)); }},
     configurable: true
   }});
+  var _origSetAttr = HTMLElement.prototype.setAttribute;
+  HTMLElement.prototype.setAttribute = function(name, val) {{
+    if (this.tagName === 'IMG' && name === 'src') val = _remapSrc(val);
+    return _origSetAttr.call(this, name, val);
+  }};
 
   // Suppress the non-fatal "Loading JS code failed." alert that JSME fires
   // when an optional deferred fragment can't load (widget still works).
