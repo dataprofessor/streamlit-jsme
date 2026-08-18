@@ -16,7 +16,7 @@ import os
 
 import streamlit as st
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 __all__ = ["st_jsme"]
 
 FORMATS = ("SMILES", "SMILES_NOISO", "MOL")
@@ -61,6 +61,7 @@ def _build_jsme_blob_setup() -> tuple[str, str]:
     #      DOM, we swap the (CSP-blocked) CDN URL for the local blob: URL.
     blob_setup = f"""
 (function() {{
+  // Build blob: URL registry for all bundled JSME files.
   var _files = {files_json};
   window._jsmeBlobs = {{}};
   for (var k in _files) {{
@@ -68,18 +69,23 @@ def _build_jsme_blob_setup() -> tuple[str, str]:
       new Blob([_files[k]], {{type: 'text/javascript'}})
     );
   }}
-  var _orig = HTMLElement.prototype.appendChild;
+
+  // GWT's compiled module sets: var $wnd = $wnd || window.parent;
+  // Pre-setting window.$wnd = window keeps JSME in the current window context
+  // regardless of iframe nesting — deferred fragments then resolve jsme correctly.
+  window.$wnd = window;
+
+  // Intercept <script src> loading so GWT's bootstrap picks up blob: URLs
+  // instead of the (404 / CSP-blocked) CDN paths.
+  var _origAC = HTMLElement.prototype.appendChild;
   HTMLElement.prototype.appendChild = function(node) {{
     if (node && node.tagName === 'SCRIPT' && node.src) {{
       var src = node.src;
       for (var k in window._jsmeBlobs) {{
-        if (src.endsWith(k)) {{
-          node.src = window._jsmeBlobs[k];
-          break;
-        }}
+        if (src.endsWith(k)) {{ node.src = window._jsmeBlobs[k]; break; }}
       }}
     }}
-    return _orig.call(this, node);
+    return _origAC.call(this, node);
   }};
 }})();
 """
@@ -111,24 +117,24 @@ _HTML = (
     + _nocache_script
     + """</script>
 <script>
-// GWT deferred fragments call $wnd.jsme.runAsyncCallbackN() where $wnd=window.parent.
-// In an iframe context (Streamlit Community Cloud) window.parent !== window, so jsme
-// must also be reachable on the parent window.
+// After nocache sets jsme.__startLoadingFragment (which builds CDN URLs),
+// replace it so GWT gets blob: URLs for all bundled fragments.
+// This works for both <script src> loading AND XHR-based loading.
 (function() {
-  function propagate() {
-    if (!window.jsme || !window.jsme.onScriptDownloaded) return;
-    try {
-      if (window.parent && window.parent !== window && !window.parent.jsme) {
-        window.parent.jsme = window.jsme;
+  function override() {
+    if (!window.jsme || typeof window.jsme.__startLoadingFragment !== 'function') return false;
+    window.jsme.__startLoadingFragment = function(fragFile) {
+      if (window._jsmeBlobs && window._jsmeBlobs[fragFile]) {
+        return window._jsmeBlobs[fragFile];
       }
-    } catch(e) {}
+      // Fallback: relative path from moduleBase
+      return (window.jsme.__moduleBase || '') + fragFile;
+    };
+    return true;
   }
-  // Try immediately, then poll until jsme is initialised.
-  propagate();
-  var t = setInterval(function() {
-    propagate();
-    if (window.jsme && window.jsme.onScriptDownloaded) clearInterval(t);
-  }, 20);
+  if (!override()) {
+    var t = setInterval(function() { if (override()) clearInterval(t); }, 10);
+  }
 })();
 </script>
 """
