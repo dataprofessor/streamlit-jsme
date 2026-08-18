@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "streamlit-jsme"
-version = "0.1.4"
+version = "0.1.5"
 description = "JSME molecule editor as a Streamlit V2 custom component"
 readme = "README.md"
 license = { text = "MIT" }
@@ -30,3 +30,4 @@ Issues   = "https://github.com/dataprofessor/streamlit-jsme/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["streamlit_jsme"]
+
