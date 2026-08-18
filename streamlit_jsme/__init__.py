@@ -16,7 +16,7 @@ import os
 
 import streamlit as st
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 __all__ = ["st_jsme"]
 
 FORMATS = ("SMILES", "SMILES_NOISO", "MOL")
@@ -52,6 +52,12 @@ def _build_jsme_blob_setup() -> tuple[str, str]:
                 files[frag] = _read(frag)
 
     files_json = json.dumps(files, ensure_ascii=False)
+
+    # PNG data file — bundled separately as base64 so it can use image/png MIME type.
+    _PNG_NAME = "40BAF81124143A595056A9CCA0E9DBBA.cache.png"
+    import base64
+    with open(os.path.join(_JSME_DIR, _PNG_NAME), "rb") as fh:
+        _png_b64 = base64.b64encode(fh.read()).decode()
     nocache = _read("jsme.nocache.js")
 
     # This script runs BEFORE jsme.nocache.js.  It:
@@ -61,7 +67,7 @@ def _build_jsme_blob_setup() -> tuple[str, str]:
     #      DOM, we swap the (CSP-blocked) CDN URL for the local blob: URL.
     blob_setup = f"""
 (function() {{
-  // Build blob: URL registry for all bundled JSME files.
+  // Build blob: URL registry for all bundled JSME JS files.
   var _files = {files_json};
   window._jsmeBlobs = {{}};
   for (var k in _files) {{
@@ -69,6 +75,28 @@ def _build_jsme_blob_setup() -> tuple[str, str]:
       new Blob([_files[k]], {{type: 'text/javascript'}})
     );
   }}
+
+  // Bundle the GWT data PNG so its broken-image icon doesn't appear.
+  var _pngBytes = atob('{_png_b64}');
+  var _pngArr = new Uint8Array(_pngBytes.length);
+  for (var i = 0; i < _pngBytes.length; i++) _pngArr[i] = _pngBytes.charCodeAt(i);
+  var _pngBlob = URL.createObjectURL(new Blob([_pngArr], {{type: 'image/png'}}));
+  window._jsmeBlobs['{_PNG_NAME}'] = _pngBlob;
+
+  // Intercept img.src to serve the bundled PNG via blob: URL.
+  var _imgSrcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+  Object.defineProperty(HTMLImageElement.prototype, 'src', {{
+    get: function() {{ return _imgSrcDesc.get.call(this); }},
+    set: function(val) {{
+      if (typeof val === 'string') {{
+        for (var k in window._jsmeBlobs) {{
+          if (val.endsWith(k)) {{ val = window._jsmeBlobs[k]; break; }}
+        }}
+      }}
+      _imgSrcDesc.set.call(this, val);
+    }},
+    configurable: true
+  }});
 
   // Suppress the non-fatal "Loading JS code failed." alert that JSME fires
   // when an optional deferred fragment can't load (widget still works).
