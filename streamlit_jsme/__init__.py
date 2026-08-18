@@ -16,7 +16,7 @@ import os
 
 import streamlit as st
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __all__ = ["st_jsme"]
 
 FORMATS = ("SMILES", "SMILES_NOISO", "MOL")
@@ -69,6 +69,14 @@ def _build_jsme_blob_setup() -> tuple[str, str]:
       new Blob([_files[k]], {{type: 'text/javascript'}})
     );
   }}
+
+  // Suppress the non-fatal "Loading JS code failed." alert that JSME fires
+  // when an optional deferred fragment can't load (widget still works).
+  var _origAlert = window.alert;
+  window.alert = function(msg) {{
+    if (typeof msg === 'string' && msg.indexOf('Loading JS code failed') !== -1) return;
+    _origAlert.call(window, msg);
+  }};
 
   // GWT's compiled module sets: var $wnd = $wnd || window.parent;
   // Pre-setting window.$wnd = window keeps JSME in the current window context
